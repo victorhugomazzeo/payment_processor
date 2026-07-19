@@ -73,7 +73,7 @@ CREATE TABLE ledger_entries (
 
 CREATE INDEX ix_ledger_entries_payment_id ON ledger_entries (payment_id);
 CREATE INDEX ix_ledger_entries_account_id ON ledger_entries (account_id);
-REVOKE UPDATE, DELETE ON ledger_entries FROM payments;
+REVOKE UPDATE, DELETE, TRUNCATE ON ledger_entries FROM payments;
 
 CREATE DOMAIN idempotency_operation AS text
     CHECK (VALUE IN ('create','capture','refund', 'void'));
