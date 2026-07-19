@@ -1,0 +1,42 @@
+version: "2"
+sql:
+  - engine: "postgresql"
+    schema: "migrations/"
+    queries: "internal/db/queries/"
+    gen:
+      go:
+        package: "db"
+        out: "internal/db"
+        sql_package: "pgx/v5"
+        overrides: 
+          - db_type: "payment_status"
+            go_type:
+              type: "string"
+          - db_type: "account_type"
+            go_type:
+              type: "string"
+          - db_type: "entry_type"
+            go_type:
+              type: "string"
+          - db_type: "movement_type"
+            go_type:
+              type: "string"
+          - db_type: "idempotency_operation"
+            go_type:
+              type: "string"
+          - db_type: "uuid"
+            go_type: "github.com/google/uuid.UUID"
+          - db_type: "uuid"
+            nullable: true
+            go_type:
+              import: "github.com/google/uuid"
+              type: "NullUUID"
+          - db_type: "timestamptz"
+            go_type: "time.Time"
+          - db_type: "timestamptz"
+            nullable: true
+            go_type:
+              import: "database/sql"
+              type: "NullTime"
+
+
