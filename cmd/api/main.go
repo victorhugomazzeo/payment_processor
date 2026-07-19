@@ -8,6 +8,8 @@ import (
 	"os"
 	"os/signal"
 	"time"
+
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 func main() {
@@ -17,16 +19,41 @@ func main() {
 	defer stop()
 
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
-
 	slog.SetDefault(logger)
+
+	dsn := os.Getenv("DATABASE_URL")
+
+	if dsn == "" {
+		slog.Error("DATABASE_URL is empty")
+		os.Exit(1)
+	}
+
+	pool, err := pgxpool.New(ctx, dsn)
+
+	if err != nil {
+		slog.Error("database pool failed", "err", err)
+		os.Exit(1)
+	}
+
+	defer pool.Close()
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /health", func(w http.ResponseWriter, r *http.Request) {
 
 		w.Header().Add("Content-Type", "application/json")
+
+		if err := pool.Ping(r.Context()); err != nil {
+			w.WriteHeader(http.StatusServiceUnavailable)
+			w.Write([]byte(`{"status":"degraded"}`))
+
+			slog.Error("database degraded", "err", err)
+			return
+		}
+
 		w.Write([]byte(`{"status":"ok"}`))
 
 		slog.Info("request", "method", r.Method, "path", r.URL.Path)
+
 	})
 
 	slog.Info("server started", "addr", ":8082")
@@ -37,7 +64,7 @@ func main() {
 		err := srv.ListenAndServe()
 
 		if !errors.Is(err, http.ErrServerClosed) {
-			slog.Error(err.Error())
+			slog.Error("serve failed", "err", err)
 			os.Exit(1)
 		}
 
