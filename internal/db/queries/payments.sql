@@ -30,5 +30,6 @@ FROM
 WHERE   
     id=$1;
 
--- name: UpdatePaymentStatus :exec
-UPDATE payments SET status=$1 WHERE id=$2;
+-- name: UpdatePaymentStatus :one
+UPDATE payments SET status=$1 WHERE id=$2
+RETURNING id, merchant_id, status, created_at, amount, currency, card_token, card_last4, card_brand;

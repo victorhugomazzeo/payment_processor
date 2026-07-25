@@ -102,8 +102,9 @@ func (q *Queries) GetPayment(ctx context.Context, id uuid.UUID) (Payment, error)
 	return i, err
 }
 
-const updatePaymentStatus = `-- name: UpdatePaymentStatus :exec
+const updatePaymentStatus = `-- name: UpdatePaymentStatus :one
 UPDATE payments SET status=$1 WHERE id=$2
+RETURNING id, merchant_id, status, created_at, amount, currency, card_token, card_last4, card_brand
 `
 
 type UpdatePaymentStatusParams struct {
@@ -111,7 +112,19 @@ type UpdatePaymentStatusParams struct {
 	ID     uuid.UUID
 }
 
-func (q *Queries) UpdatePaymentStatus(ctx context.Context, arg UpdatePaymentStatusParams) error {
-	_, err := q.db.Exec(ctx, updatePaymentStatus, arg.Status, arg.ID)
-	return err
+func (q *Queries) UpdatePaymentStatus(ctx context.Context, arg UpdatePaymentStatusParams) (Payment, error) {
+	row := q.db.QueryRow(ctx, updatePaymentStatus, arg.Status, arg.ID)
+	var i Payment
+	err := row.Scan(
+		&i.ID,
+		&i.MerchantID,
+		&i.Status,
+		&i.CreatedAt,
+		&i.Amount,
+		&i.Currency,
+		&i.CardToken,
+		&i.CardLast4,
+		&i.CardBrand,
+	)
+	return i, err
 }
