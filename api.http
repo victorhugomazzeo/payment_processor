@@ -1,0 +1,11 @@
+### Create payment
+POST http://localhost:8082/payments
+Content-Type: application/json
+
+{ 
+    "merchant_id": "019faacc-976e-7692-b22f-364780c024cc",
+    "card_token": "XXXXXX",
+    "card_last4": "1234",
+    "card_brand": "visa",
+    "amount_cents": 100
+ }
