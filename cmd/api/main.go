@@ -10,6 +10,10 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/victorhugomazzeo/payment-processor/internal/api"
+	"github.com/victorhugomazzeo/payment-processor/internal/db"
+	"github.com/victorhugomazzeo/payment-processor/internal/payment"
+	"github.com/victorhugomazzeo/payment-processor/internal/processor"
 )
 
 func main() {
@@ -37,6 +41,11 @@ func main() {
 
 	defer pool.Close()
 
+	queries := db.New(pool)
+	proc := processor.NewDummy()
+	svc := payment.NewService(pool, queries, proc)
+	handler := api.NewHandler(svc)
+
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /health", func(w http.ResponseWriter, r *http.Request) {
 
@@ -55,6 +64,7 @@ func main() {
 		slog.Info("request", "method", r.Method, "path", r.URL.Path)
 
 	})
+	mux.HandleFunc("POST /payments", handler.CreatePayment)
 
 	slog.Info("server started", "addr", ":8082")
 
