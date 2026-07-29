@@ -67,6 +67,14 @@ func (h *Handler) CreatePayment(w http.ResponseWriter, r *http.Request) {
 	p, err := h.svc.CreatePayment(r.Context(), svcArgs)
 
 	if err != nil {
+
+		if errors.Is(err, payment.ErrMerchantNotFound) {
+			writeJSON(w, http.StatusUnprocessableEntity, errorResponse{
+				Error: "merchant_id not found",
+			})
+			return
+		}
+
 		writeJSON(w, http.StatusInternalServerError, errorResponse{
 			Error: "internal server error",
 		})

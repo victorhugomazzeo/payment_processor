@@ -3,11 +3,13 @@ package payment
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/victorhugomazzeo/payment-processor/internal/db"
 	"github.com/victorhugomazzeo/payment-processor/internal/processor"
@@ -74,6 +76,10 @@ func (s *Service) CreatePayment(ctx context.Context, args CreatePaymentArgs) (db
 	})
 
 	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == fkViolationCode {
+			return db.Payment{}, ErrMerchantNotFound
+		}
 		return db.Payment{}, fmt.Errorf("creating payment: %w", err)
 	}
 

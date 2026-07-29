@@ -9,3 +9,15 @@ Content-Type: application/json
     "card_brand": "visa",
     "amount_cents": 100
  }
+
+### Create payment — merchant inexistente (422)
+POST http://localhost:8082/payments
+Content-Type: application/json
+
+{ 
+    "merchant_id": "019fada9-4a23-7e96-9a91-949cc125eae4",
+    "card_token": "XXXXXX",
+    "card_last4": "1234",
+    "card_brand": "visa",
+    "amount_cents": 100
+ }
