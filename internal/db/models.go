@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type Account struct {
@@ -22,10 +23,10 @@ type Account struct {
 type IdempotencyKey struct {
 	IdempotencyKey       string
 	MerchantID           uuid.UUID
-	PaymentID            uuid.UUID
+	PaymentID            uuid.NullUUID
 	IdempotencyOperation string
 	RequestHash          string
-	ResponseStatus       int32
+	ResponseStatus       pgtype.Int4
 	Response             []byte
 	CreatedAt            time.Time
 }
