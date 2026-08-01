@@ -64,7 +64,7 @@ func main() {
 		slog.Info("request", "method", r.Method, "path", r.URL.Path)
 
 	})
-	mux.HandleFunc("POST /payments", handler.CreatePayment)
+	mux.Handle("POST /payments", api.RequireMerchant(http.HandlerFunc(handler.CreatePayment)))
 
 	slog.Info("server started", "addr", ":8082")
 

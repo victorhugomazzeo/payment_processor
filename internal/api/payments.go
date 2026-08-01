@@ -3,7 +3,6 @@ package api
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"log/slog"
 	"net/http"
 	"strings"
@@ -15,7 +14,6 @@ import (
 )
 
 type CreatePaymentRequest struct {
-	MerchantID  string `json:"merchant_id"`
 	CardToken   string `json:"card_token"`
 	CardLast4   string `json:"card_last4"`
 	CardBrand   string `json:"card_brand"`
@@ -45,6 +43,16 @@ func NewHandler(svc *payment.Service) *Handler {
 
 func (h *Handler) CreatePayment(w http.ResponseWriter, r *http.Request) {
 
+	id, ok := MerchantFromContext(r.Context())
+	if !ok {
+		slog.Error("merchant missing from context: RequireMerchant not wired", "method", r.Method, "path", r.URL.Path)
+
+		writeJSON(w, http.StatusInternalServerError, errorResponse{
+			Error: "internal server error",
+		})
+		return
+	}
+
 	var req CreatePaymentRequest
 	err := json.NewDecoder(r.Body).Decode(&req)
 
@@ -55,7 +63,7 @@ func (h *Handler) CreatePayment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	svcArgs, err := req.ToServiceArgs()
+	svcArgs, err := req.ToServiceArgs(id)
 
 	if err != nil {
 		writeJSON(w, http.StatusBadRequest, errorResponse{
@@ -114,11 +122,7 @@ func writeJSON(w http.ResponseWriter, code int, v any) {
 	}
 }
 
-func (r CreatePaymentRequest) ToServiceArgs() (payment.CreatePaymentArgs, error) {
-	merchantID, err := uuid.Parse(r.MerchantID)
-	if err != nil {
-		return payment.CreatePaymentArgs{}, fmt.Errorf("invalid merchant_id: %v", err)
-	}
+func (r CreatePaymentRequest) ToServiceArgs(merchantID uuid.UUID) (payment.CreatePaymentArgs, error) {
 
 	if r.CardToken == "" {
 		return payment.CreatePaymentArgs{}, errors.New("invalid card_token")

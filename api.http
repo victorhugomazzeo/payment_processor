@@ -1,9 +1,9 @@
 ### Create payment
 POST http://localhost:8082/payments
 Content-Type: application/json
+Merchant-Id: 019fbd1b-8e69-74f7-89d4-a2d92ba75a70
 
 { 
-    "merchant_id": "019faacc-976e-7692-b22f-364780c024cc",
     "card_token": "XXXXXX",
     "card_last4": "1234",
     "card_brand": "visa",
@@ -13,11 +13,34 @@ Content-Type: application/json
 ### Create payment — merchant inexistente (422)
 POST http://localhost:8082/payments
 Content-Type: application/json
+Merchant-Id: 019fbd1d-4e12-728f-8b73-662285c586d0
 
 { 
-    "merchant_id": "019fada9-4a23-7e96-9a91-949cc125eae4",
     "card_token": "XXXXXX",
     "card_last4": "1234",
     "card_brand": "visa",
     "amount_cents": 100
- }
+}
+
+### Create payment — empty merchant-id header (400)
+POST http://localhost:8082/payments
+Content-Type: application/json
+
+{ 
+    "card_token": "XXXXXX",
+    "card_last4": "1234",
+    "card_brand": "visa",
+    "amount_cents": 100
+}
+
+### Create payment — not uuid merchant-id header (400)
+POST http://localhost:8082/payments
+Content-Type: application/json
+Merchant-Id: XXX
+
+{ 
+    "card_token": "XXXXXX",
+    "card_last4": "1234",
+    "card_brand": "visa",
+    "amount_cents": 100
+}
