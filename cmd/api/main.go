@@ -42,6 +42,8 @@ func main() {
 	defer pool.Close()
 
 	queries := db.New(pool)
+
+	idempotency := api.NewIdempotency(queries)
 	proc := processor.NewDummy()
 	svc := payment.NewService(pool, queries, proc)
 	handler := api.NewHandler(svc)
@@ -64,7 +66,8 @@ func main() {
 		slog.Info("request", "method", r.Method, "path", r.URL.Path)
 
 	})
-	mux.Handle("POST /payments", api.RequireMerchant(http.HandlerFunc(handler.CreatePayment)))
+	mux.Handle("POST /payments", api.RequireMerchant(
+		idempotency.Middleware("create", http.HandlerFunc(handler.CreatePayment))))
 
 	slog.Info("server started", "addr", ":8082")
 
