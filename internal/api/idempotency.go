@@ -14,6 +14,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/victorhugomazzeo/payment-processor/internal/db"
 	"github.com/victorhugomazzeo/payment-processor/internal/payment"
 )
@@ -29,9 +30,10 @@ const retryAfterInSeconds = "10"
 type idempotencyCtxKey struct{}
 
 type Idempotency struct {
-	q           *db.Queries
-	now         func() time.Time
-	claimMaxAge time.Duration
+	q                   *db.Queries
+	now                 func() time.Time
+	claimMaxAge         time.Duration
+	saveResponseTimeout time.Duration
 }
 
 type responseRecorder struct {
@@ -48,7 +50,8 @@ func NewIdempotency(q *db.Queries) *Idempotency {
 		now: func() time.Time {
 			return time.Now().UTC()
 		},
-		claimMaxAge: 60 * time.Second,
+		claimMaxAge:         60 * time.Second,
+		saveResponseTimeout: 3 * time.Second,
 	}
 }
 
@@ -119,17 +122,46 @@ func (i *Idempotency) Middleware(operation string, next http.Handler) http.Handl
 
 		next.ServeHTTP(rec, r.WithContext(ctx))
 
-		maps.Copy(w.Header(), rec.Header())
-
 		statusCode := rec.status
-
 		if statusCode == 0 {
 			statusCode = http.StatusOK
 		}
 
+		resp := rec.body.Bytes()
+
+		if statusCode < http.StatusInternalServerError {
+
+			updateArgs := db.UpdateIdempotencyKeyResponseParams{
+				ResponseStatus: pgtype.Int4{
+					Int32: int32(statusCode),
+					Valid: true,
+				},
+				Response:       resp,
+				IdempotencyKey: key,
+				MerchantID:     merchantID,
+			}
+
+			i.tryPersistResponse(ctx, updateArgs)
+		}
+
+		maps.Copy(w.Header(), rec.Header())
+
 		w.WriteHeader(statusCode)
-		w.Write(rec.body.Bytes())
+		w.Write(resp)
 	})
+}
+
+func (i *Idempotency) tryPersistResponse(ctx context.Context, args db.UpdateIdempotencyKeyResponseParams) {
+
+	baseCtx := context.WithoutCancel(ctx)
+	keyCtx, cancel := context.WithTimeout(baseCtx, i.saveResponseTimeout)
+	defer cancel()
+
+	err := i.q.UpdateIdempotencyKeyResponse(keyCtx, args)
+
+	if err != nil {
+		slog.Error("fail to update idempotency key response", "error", err, "merchant_id", args.MerchantID, "idempotency_key", args.IdempotencyKey)
+	}
 }
 
 func IdempotencyKeyFromContext(ctx context.Context) (string, bool) {
@@ -162,7 +194,9 @@ func (i *Idempotency) resolveRetry(w http.ResponseWriter, r *http.Request, merch
 		return
 	}
 
-	// A recorded response means the original request completed. Replay it verbatim: the stored bytes are already encoded JSON.
+	// A recorded response means the original request completed. Write the stored JSON straight to the wire:
+	// re-encoding it would nest JSON inside JSON. The jsonb column normalizes formatting and key order,
+	// so the replay matches the original in content, not byte for byte.
 	if k.ResponseStatus.Valid {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(int(k.ResponseStatus.Int32))
