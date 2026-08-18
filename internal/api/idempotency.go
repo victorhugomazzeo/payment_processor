@@ -23,6 +23,8 @@ const idempotencyKeyHeader = "Idempotency-Key"
 
 const uniqueViolationCode = "23505"
 
+const fkViolationCode = "23503"
+
 const retryAfterHeader = "Retry-After"
 
 const retryAfterInSeconds = "10"
@@ -51,7 +53,7 @@ func NewIdempotency(q *db.Queries) *Idempotency {
 			return time.Now().UTC()
 		},
 		claimMaxAge:         60 * time.Second,
-		saveResponseTimeout: 3 * time.Second,
+		saveResponseTimeout: 2 * time.Second,
 	}
 }
 
@@ -105,6 +107,11 @@ func (i *Idempotency) Middleware(operation string, next http.Handler) http.Handl
 			var pgErr *pgconn.PgError
 			if errors.As(err, &pgErr) && pgErr.Code == uniqueViolationCode {
 				i.resolveRetry(w, r, merchantID, key, hash)
+				return
+			} else if errors.As(err, &pgErr) && pgErr.Code == fkViolationCode {
+				writeJSON(w, http.StatusUnprocessableEntity, errorResponse{
+					Error: "merchant_id not found",
+				})
 				return
 			}
 

@@ -2,7 +2,7 @@
 POST http://localhost:8082/payments
 Content-Type: application/json
 Merchant-Id: 019fbd1b-8e69-74f7-89d4-a2d92ba75a70
-Idempotency-Key: 019fbd1b-8e69-74f7-89d4-a2d92ba75a70
+Idempotency-Key: {{$uuid}}
 
 { 
     "card_token": "XXXXXX",
@@ -14,7 +14,8 @@ Idempotency-Key: 019fbd1b-8e69-74f7-89d4-a2d92ba75a70
 ### Create payment — merchant inexistente (422)
 POST http://localhost:8082/payments
 Content-Type: application/json
-Merchant-Id: 019fbd1d-4e12-728f-8b73-662285c586d0
+Merchant-Id: {{$uuid}}
+Idempotency-Key: {{$uuid}}
 
 { 
     "card_token": "XXXXXX",
@@ -44,4 +45,30 @@ Merchant-Id: XXX
     "card_last4": "1234",
     "card_brand": "visa",
     "amount_cents": 100
+}
+
+### Create payment — replay (rodar 2×, esperar 201 IDÊNTICO)
+POST http://localhost:8082/payments
+Content-Type: application/json
+Merchant-Id: 019fbd1b-8e69-74f7-89d4-a2d92ba75a70
+Idempotency-Key: 019fdbe9-9298-70dc-a186-e42953c1bc57
+
+{
+  "card_token": "XXXXXX",
+  "card_last4": "1234",
+  "card_brand": "visa",
+  "amount_cents": 100
+}
+
+### Create payment — mesma key, corpo diferente (422)
+POST http://localhost:8082/payments
+Content-Type: application/json
+Merchant-Id: 019fbd1b-8e69-74f7-89d4-a2d92ba75a70
+Idempotency-Key: 019fdbe9-9298-70dc-a186-e42953c1bc57
+
+{
+  "card_token": "XXXXXX",
+  "card_last4": "1234",
+  "card_brand": "visa",
+  "amount_cents": 999
 }
