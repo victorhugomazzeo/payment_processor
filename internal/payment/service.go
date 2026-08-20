@@ -25,11 +25,12 @@ type Service struct {
 }
 
 type CreatePaymentArgs struct {
-	MerchantID  uuid.UUID
-	CardToken   string
-	CardLast4   string
-	CardBrand   string
-	AmountCents int64
+	MerchantID     uuid.UUID
+	CardToken      string
+	CardLast4      string
+	CardBrand      string
+	AmountCents    int64
+	IdempotencyKey string
 }
 
 func NewService(pool *pgxpool.Pool, queries *db.Queries, proc *processor.Dummy) *Service {
@@ -100,6 +101,16 @@ func (s *Service) CreatePayment(ctx context.Context, args CreatePaymentArgs) (db
 
 	if err != nil {
 		return db.Payment{}, fmt.Errorf("creating paymentEvent: %w", err)
+	}
+
+	err = queries.UpdateIdempotencyKeyPaymentID(ctx, db.UpdateIdempotencyKeyPaymentIDParams{
+		PaymentID:      uuid.NullUUID{UUID: paymentID, Valid: true},
+		IdempotencyKey: args.IdempotencyKey,
+		MerchantID:     args.MerchantID,
+	})
+
+	if err != nil {
+		return db.Payment{}, fmt.Errorf("updating Idempotence key: %w", err)
 	}
 
 	if err := trx.Commit(ctx); err != nil {

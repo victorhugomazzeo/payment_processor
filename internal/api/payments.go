@@ -63,7 +63,18 @@ func (h *Handler) CreatePayment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	svcArgs, err := req.ToServiceArgs(id)
+	idempotencyKey, valid := IdempotencyKeyFromContext(r.Context())
+	if !valid {
+
+		slog.Error("idempotency key missing from context: Idempotency.Middleware not wired", "method", r.Method, "path", r.URL.Path)
+
+		writeJSON(w, http.StatusInternalServerError, errorResponse{
+			Error: "internal server error",
+		})
+		return
+	}
+
+	svcArgs, err := req.ToServiceArgs(id, idempotencyKey)
 
 	if err != nil {
 		writeJSON(w, http.StatusBadRequest, errorResponse{
@@ -122,7 +133,7 @@ func writeJSON(w http.ResponseWriter, code int, v any) {
 	}
 }
 
-func (r CreatePaymentRequest) ToServiceArgs(merchantID uuid.UUID) (payment.CreatePaymentArgs, error) {
+func (r CreatePaymentRequest) ToServiceArgs(merchantID uuid.UUID, idempotencyKey string) (payment.CreatePaymentArgs, error) {
 
 	if r.CardToken == "" {
 		return payment.CreatePaymentArgs{}, errors.New("invalid card_token")
@@ -135,21 +146,20 @@ func (r CreatePaymentRequest) ToServiceArgs(merchantID uuid.UUID) (payment.Creat
 	if len(r.CardLast4) != 4 || hasNonDigit {
 		return payment.CreatePaymentArgs{}, errors.New("invalid card_last4")
 	}
-
 	if r.CardBrand == "" {
 		return payment.CreatePaymentArgs{}, errors.New("invalid card_brand")
 	}
-
 	if r.AmountCents <= 0 {
 		return payment.CreatePaymentArgs{}, errors.New("invalid amount_cents")
 	}
 
 	return payment.CreatePaymentArgs{
-		MerchantID:  merchantID,
-		CardToken:   r.CardToken,
-		CardLast4:   r.CardLast4,
-		CardBrand:   r.CardBrand,
-		AmountCents: r.AmountCents,
+		MerchantID:     merchantID,
+		CardToken:      r.CardToken,
+		CardLast4:      r.CardLast4,
+		CardBrand:      r.CardBrand,
+		AmountCents:    r.AmountCents,
+		IdempotencyKey: idempotencyKey,
 	}, nil
 }
 
