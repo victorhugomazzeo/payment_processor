@@ -16,6 +16,8 @@ import (
 	"github.com/victorhugomazzeo/payment-processor/internal/processor"
 )
 
+const httpRequestTimeout = 10 * time.Second
+
 func main() {
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
@@ -71,7 +73,8 @@ func main() {
 
 	slog.Info("server started", "addr", ":8082")
 
-	srv := &http.Server{Addr: ":8082", Handler: mux}
+	timeoutHandler := http.TimeoutHandler(mux, httpRequestTimeout, "request timeout")
+	srv := &http.Server{Addr: ":8082", Handler: timeoutHandler}
 
 	go func() {
 		err := srv.ListenAndServe()
