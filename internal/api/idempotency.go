@@ -36,6 +36,7 @@ type Idempotency struct {
 	now                 func() time.Time
 	claimMaxAge         time.Duration
 	saveResponseTimeout time.Duration
+	maxBodyBytes        int64
 }
 
 type responseRecorder struct {
@@ -54,6 +55,7 @@ func NewIdempotency(q *db.Queries) *Idempotency {
 		},
 		claimMaxAge:         60 * time.Second,
 		saveResponseTimeout: 2 * time.Second,
+		maxBodyBytes:        1024 * 32,
 	}
 }
 
@@ -79,12 +81,24 @@ func (i *Idempotency) Middleware(operation string, next http.Handler) http.Handl
 			return
 		}
 
-		body, err := io.ReadAll(r.Body)
+		reader := http.MaxBytesReader(w, r.Body, i.maxBodyBytes)
+		body, err := io.ReadAll(reader)
 
 		if err != nil {
-			writeJSON(w, http.StatusBadRequest, errorResponse{
-				Error: "invalid request body",
-			})
+
+			var maxBytesError *http.MaxBytesError
+			if errors.As(err, &maxBytesError) {
+
+				writeJSON(w, http.StatusRequestEntityTooLarge, errorResponse{
+					Error: "request body too large",
+				})
+
+			} else {
+				writeJSON(w, http.StatusBadRequest, errorResponse{
+					Error: "invalid request body",
+				})
+			}
+
 			return
 		}
 
