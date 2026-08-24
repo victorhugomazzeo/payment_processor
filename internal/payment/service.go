@@ -110,7 +110,7 @@ func (s *Service) CreatePayment(ctx context.Context, args CreatePaymentArgs) (db
 	})
 
 	if err != nil {
-		return db.Payment{}, fmt.Errorf("updating Idempotence key: %w", err)
+		return db.Payment{}, fmt.Errorf("updating idempotence key: %w", err)
 	}
 
 	if err := trx.Commit(ctx); err != nil {
