@@ -9,6 +9,8 @@ import (
 
 const merchantIDHeader = "Merchant-Id"
 
+const merchantNotFoundMessage = "Merchant-Id not found"
+
 type merchantCtxKey struct{}
 
 func MerchantFromContext(ctx context.Context) (uuid.UUID, bool) {

@@ -119,14 +119,24 @@ func (i *Idempotency) Middleware(operation string, next http.Handler) http.Handl
 		if err != nil {
 
 			var pgErr *pgconn.PgError
-			if errors.As(err, &pgErr) && pgErr.Code == uniqueViolationCode {
-				i.resolveRetry(w, r, merchantID, key, hash)
-				return
-			} else if errors.As(err, &pgErr) && pgErr.Code == fkViolationCode {
-				writeJSON(w, http.StatusUnprocessableEntity, errorResponse{
-					Error: "merchant_id not found",
-				})
-				return
+
+			if errors.As(err, &pgErr) {
+				switch pgErr.Code {
+				case uniqueViolationCode:
+					i.resolveRetry(w, r, merchantID, key, hash)
+					return
+
+				case fkViolationCode:
+
+					// A 23503 here can only be the merchant FK: this claim is inserted without
+					// payment_id, and NULL never violates a foreign key. If a query in this
+					// middleware ever writes payment_id, this translation must be revisited.
+
+					writeJSON(w, http.StatusUnprocessableEntity, errorResponse{
+						Error: merchantNotFoundMessage,
+					})
+					return
+				}
 			}
 
 			slog.Error("error during creation of idempotency key", "error", err, "method", r.Method, "path", r.URL.Path)

@@ -89,7 +89,7 @@ func (h *Handler) CreatePayment(w http.ResponseWriter, r *http.Request) {
 
 		if errors.Is(err, payment.ErrMerchantNotFound) {
 			writeJSON(w, http.StatusUnprocessableEntity, errorResponse{
-				Error: "merchant_id not found",
+				Error: merchantNotFoundMessage,
 			})
 			return
 		}
