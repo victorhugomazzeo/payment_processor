@@ -104,8 +104,16 @@ func (i *Idempotency) Middleware(operation string, next http.Handler) http.Handl
 
 		r.Body = io.NopCloser(bytes.NewReader(body))
 
-		sum := sha256.Sum256(body)
-		hash := hex.EncodeToString(sum[:])
+		bodySum := sha256.Sum256(body)
+
+		h := sha256.New()
+		io.WriteString(h, r.Method)
+		io.WriteString(h, "\n")
+		io.WriteString(h, r.URL.Path)
+		io.WriteString(h, "\n")
+		h.Write(bodySum[:])
+
+		hash := hex.EncodeToString(h.Sum(nil))
 
 		err = i.q.CreateIdempotencyKey(r.Context(),
 			db.CreateIdempotencyKeyParams{
@@ -217,10 +225,11 @@ func (i *Idempotency) resolveRetry(w http.ResponseWriter, r *http.Request, merch
 		return
 	}
 
-	// Universal gate: the same key with a different body is a client bug, never a retry.
 	if k.RequestHash != hash {
+
+		// Universal gate: the same key with a different request (method, path or body) is a client bug, never a retry.
 		writeJSON(w, http.StatusUnprocessableEntity, errorResponse{
-			Error: "Idempotency-Key reused with a different request body",
+			Error: "Idempotency-Key reused with a different request (method, path or body)",
 		})
 		return
 	}
