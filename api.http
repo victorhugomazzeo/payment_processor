@@ -5,7 +5,7 @@ Merchant-Id: 019fbd1b-8e69-74f7-89d4-a2d92ba75a70
 Idempotency-Key: {{$uuid}}
 
 { 
-    "card_token": "XXXXXX",
+    "card_token": "XXXX",
     "card_last4": "1234",
     "card_brand": "visa",
     "amount_cents": 100
