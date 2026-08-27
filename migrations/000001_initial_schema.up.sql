@@ -18,6 +18,10 @@ CREATE TABLE payments (
     card_token text NOT NULL,
     card_last4 text NOT NULL CHECK (card_last4 ~ '^[0-9]{4}$'),
     card_brand text NOT NULL,
+    processor_transaction_id  text NULL,
+    CONSTRAINT payments_processor_transaction_id_check CHECK (
+        processor_transaction_id IS NOT NULL OR (status = 'created' OR status = 'abandoned')
+    ),
     CONSTRAINT fk_payments_merchant FOREIGN KEY (merchant_id) REFERENCES merchants(id)
 );
 
