@@ -2,7 +2,7 @@
 POST http://localhost:8082/payments
 Content-Type: application/json
 Merchant-Id: 019fbd1b-8e69-74f7-89d4-a2d92ba75a70
-Idempotency-Key: {{$uuid}}
+Idempotency-Key: {{$guid}}
 
 { 
     "card_token": "XXXX",
@@ -15,7 +15,7 @@ Idempotency-Key: {{$uuid}}
 POST http://localhost:8082/payments
 Content-Type: application/json
 Merchant-Id: {{$uuid}}
-Idempotency-Key: {{$uuid}}
+Idempotency-Key: {{$guid}}
 
 { 
     "card_token": "XXXXXX",

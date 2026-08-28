@@ -13,7 +13,7 @@ type AuthorizeResult struct {
 	Authorized    bool
 	ReturnCode    string
 	ReturnMessage string
-	Transaction   string
+	TransactionID string
 }
 
 type Dummy struct {
@@ -32,11 +32,11 @@ func (m *Dummy) Authorize(ctx context.Context, cardToken string, amountCents int
 		outcome := rand.IntN(100)
 
 		if outcome <= 79 {
-			return AuthorizeResult{Authorized: true, ReturnCode: "00", Transaction: uuid.New().String()}, nil
+			return AuthorizeResult{Authorized: true, ReturnCode: "00", TransactionID: uuid.New().String()}, nil
 		}
 
 		if outcome <= 94 {
-			return AuthorizeResult{Authorized: false, ReturnCode: "51", ReturnMessage: "insufficient funds", Transaction: uuid.New().String()}, nil
+			return AuthorizeResult{Authorized: false, ReturnCode: "51", ReturnMessage: "insufficient funds", TransactionID: uuid.New().String()}, nil
 		}
 
 		return AuthorizeResult{}, errors.New("processor unavailable")

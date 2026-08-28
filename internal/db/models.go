@@ -58,15 +58,16 @@ type Outbox struct {
 }
 
 type Payment struct {
-	ID         uuid.UUID
-	MerchantID uuid.UUID
-	Status     string
-	CreatedAt  time.Time
-	Amount     int64
-	Currency   string
-	CardToken  string
-	CardLast4  string
-	CardBrand  string
+	ID                     uuid.UUID
+	MerchantID             uuid.UUID
+	Status                 string
+	CreatedAt              time.Time
+	Amount                 int64
+	Currency               string
+	CardToken              string
+	CardLast4              string
+	CardBrand              string
+	ProcessorTransactionID pgtype.Text
 }
 
 type PaymentEvent struct {

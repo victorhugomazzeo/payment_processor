@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const createPayment = `-- name: CreatePayment :one
@@ -26,7 +27,7 @@ INSERT INTO payments
     card_brand
 ) 
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-RETURNING id, merchant_id, status, created_at, amount, currency, card_token, card_last4, card_brand
+RETURNING id, merchant_id, status, created_at, amount, currency, card_token, card_last4, card_brand, processor_transaction_id
 `
 
 type CreatePaymentParams struct {
@@ -64,6 +65,7 @@ func (q *Queries) CreatePayment(ctx context.Context, arg CreatePaymentParams) (P
 		&i.CardToken,
 		&i.CardLast4,
 		&i.CardBrand,
+		&i.ProcessorTransactionID,
 	)
 	return i, err
 }
@@ -78,7 +80,8 @@ SELECT
     currency,
     card_token,
     card_last4,
-    card_brand
+    card_brand,
+    processor_transaction_id
 FROM
     payments
 WHERE   
@@ -98,22 +101,30 @@ func (q *Queries) GetPayment(ctx context.Context, id uuid.UUID) (Payment, error)
 		&i.CardToken,
 		&i.CardLast4,
 		&i.CardBrand,
+		&i.ProcessorTransactionID,
 	)
 	return i, err
 }
 
 const updatePaymentStatus = `-- name: UpdatePaymentStatus :one
-UPDATE payments SET status=$1 WHERE id=$2
-RETURNING id, merchant_id, status, created_at, amount, currency, card_token, card_last4, card_brand
+UPDATE 
+    payments 
+SET 
+    status=$1,
+    processor_transaction_id=$2
+WHERE 
+    id=$3
+RETURNING id, merchant_id, status, created_at, amount, currency, card_token, card_last4, card_brand, processor_transaction_id
 `
 
 type UpdatePaymentStatusParams struct {
-	Status string
-	ID     uuid.UUID
+	Status                 string
+	ProcessorTransactionID pgtype.Text
+	ID                     uuid.UUID
 }
 
 func (q *Queries) UpdatePaymentStatus(ctx context.Context, arg UpdatePaymentStatusParams) (Payment, error) {
-	row := q.db.QueryRow(ctx, updatePaymentStatus, arg.Status, arg.ID)
+	row := q.db.QueryRow(ctx, updatePaymentStatus, arg.Status, arg.ProcessorTransactionID, arg.ID)
 	var i Payment
 	err := row.Scan(
 		&i.ID,
@@ -125,6 +136,7 @@ func (q *Queries) UpdatePaymentStatus(ctx context.Context, arg UpdatePaymentStat
 		&i.CardToken,
 		&i.CardLast4,
 		&i.CardBrand,
+		&i.ProcessorTransactionID,
 	)
 	return i, err
 }

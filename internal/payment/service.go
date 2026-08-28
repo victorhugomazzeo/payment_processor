@@ -10,6 +10,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/victorhugomazzeo/payment-processor/internal/db"
 	"github.com/victorhugomazzeo/payment-processor/internal/processor"
@@ -213,8 +214,9 @@ func (s *Service) persistProcessedPayment(ctx context.Context, paymentID uuid.UU
 	}
 
 	payment, err := queries.UpdatePaymentStatus(ctx, db.UpdatePaymentStatusParams{
-		Status: string(toStatus),
-		ID:     paymentID,
+		Status:                 string(toStatus),
+		ID:                     paymentID,
+		ProcessorTransactionID: pgtype.Text{Valid: authResult.TransactionID != "", String: authResult.TransactionID},
 	})
 	if err != nil {
 		return db.Payment{}, fmt.Errorf("updating payment: %w", err)
