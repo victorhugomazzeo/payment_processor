@@ -14,7 +14,7 @@ Idempotency-Key: {{$guid}}
 ### Create payment — merchant inexistente (422)
 POST http://localhost:8082/payments
 Content-Type: application/json
-Merchant-Id: {{$uuid}}
+Merchant-Id: {{$guid}}
 Idempotency-Key: {{$guid}}
 
 { 
